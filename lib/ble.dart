@@ -73,20 +73,29 @@ class Ble {
   final String characteristicUUID = "fb349b5f-8000-0080-0010-0000d5c3b2a1";
 
   Future<void> connect() async {
-    print("connect");
-    // FlutterBlue.instance.startScan(timeout: Duration(seconds: 4));
+    print("start scan");
+
     try {
       await FlutterBluePlus.stopScan();
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));
-      FlutterBluePlus.scanResults.listen((results) {
+      bool deviceFound = false;
+      final subscription = FlutterBluePlus.scanResults.listen((results) async {
         for (ScanResult r in results) {
-          if (r.device.platformName == devName) {
+          if (r.device.platformName == devName && !deviceFound) {
+            deviceFound = true;
             device = r.device;
-            connectToDevice();
+            print("service name: $r.device.platformName ");
+            await connectToDevice();
             break;
           }
         }
       });
+
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));
+      await Future.delayed(const Duration(seconds: 4));
+      if (!deviceFound) {
+        print("device not found");
+        subscription.cancel();
+      }
 
       // 오류 처리
     } catch (e) {
@@ -142,51 +151,11 @@ class Ble {
 
   void init() async {
     print("init");
+
     FlutterBluePlus.scanResults.listen((results) async {
       // print("results: $results");
-      for (var result in results) {
-        if (result.device.platformName == devName) {
-          FlutterBluePlus.stopScan();
-          device = result.device;
-          try {
-            await device?.connect();
-            device?.connectionState.listen((state) {
-              print("device state $state");
-              if (state == BluetoothConnectionState.connected) {
-                stateController.add(BluetoothConnectionState.connected);
-              }
-              // });
-
-              device?.discoverServices().then((services) {
-                for (var service in services) {
-                  if (service.uuid.toString() == serviceUUID) {
-                    for (var c in service.characteristics) {
-                      if (c.uuid.toString() == characteristicUUID) {
-                        characteristic = c;
-                        ready.add(true);
-                      }
-                    }
-                  }
-                }
-              });
-            });
-            device?.discoverServices();
-            print('connected  devicde ${FlutterBluePlus.connectedDevices}');
-          } catch (e) {
-            print('connection error');
-          }
-        }
-      }
     });
   }
-
-  // void disconnect() {
-  //   print("disconnect");
-  //   device?.disconnect();
-  //   stateController.add(BluetoothDeviceState.disconnected);
-  //   device = null;
-  //   ready.add(false);
-  // }
 
   void toggleLed(bool onOff) async {
     // device

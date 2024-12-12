@@ -104,11 +104,11 @@ class _MainScreen extends State<MainPage> {
       setState(() => lightOnOff = event);
     });
 
-    Ble.instance.ready.stream.listen((event) async {
-      if (event == true) {
-        await Ble.instance.readLedStatus();
-      }
-    });
+    // Ble.instance.ready.stream.listen((event) async {
+    //   if (event == true) {
+    //     await Ble.instance.readLedStatus();
+    //   }
+    // });
   }
 
   void changeColor(Color color) {
@@ -152,6 +152,7 @@ class _MainScreen extends State<MainPage> {
                       // setState(() {
                       //   status1 = val;
                       // });
+                      print("select toggle btn: $val");
 
                       if (val) {
                         Ble.instance.connect();
@@ -287,53 +288,3 @@ class _MainScreen extends State<MainPage> {
     );
   }
 }
-
-// class __MainScreen extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: Text('Sleep Light'),
-//       ),
-//       body: Center(
-//         child: SingleChildScrollView(
-//           child: Column(
-//             children: <Widget>[
-//               Container(
-//                   child: FlutterSwitch(
-//                 width: 120,
-//                 height: 55,
-//                 valueFontSize: 20,
-//                 toggleSize: 40,
-//                 padding: 10,
-//                 showOnOff: true,
-//                 value: true,
-//                 onToggle: (val) {
-//                   print(val);
-//                 },
-//               ))
-//             ],
-//           ),
-//         ),
-//       ),
-//       floatingActionButton: StreamBuilder<bool>(
-//         stream: FlutterBlue.instance.isScanning,
-//         initialData: false,
-//         builder: (c, snapshot) {
-//           final isScanning = snapshot.data ?? false;
-//           return FloatingActionButton(
-//             child: Icon(Icons.stop),
-//             onPressed: () {
-//               if (isScanning) {
-//                 FlutterBlue.instance.stopScan();
-//               } else {
-//                 FlutterBlue.instance..startScan(timeout: Duration(seconds: 4));
-//               }
-//             },
-//             backgroundColor: Colors.red,
-//           );
-//         },
-//       ),
-//     );
-//   }
-// }
