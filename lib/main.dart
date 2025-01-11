@@ -104,11 +104,11 @@ class _MainScreen extends State<MainPage> {
       setState(() => lightOnOff = event);
     });
 
-    // Ble.instance.ready.stream.listen((event) async {
-    //   if (event == true) {
-    //     await Ble.instance.readLedStatus();
-    //   }
-    // });
+    Ble.instance.ready.stream.listen((event) async {
+      if (event == true) {
+        await Ble.instance.readLedStatus();
+      }
+    });
   }
 
   void changeColor(Color color) {
@@ -148,18 +148,33 @@ class _MainScreen extends State<MainPage> {
                     toggleSize: 20,
                     borderRadius: 30.0,
                     padding: 2.0,
-                    onToggle: (val) {
-                      // setState(() {
-                      //   status1 = val;
-                      // });
-                      print("select toggle btn: $val");
-
-                      if (val) {
-                        Ble.instance.connect();
+                    onToggle: (tryConnect) async {
+                      bool isComplete = false;
+                      if (tryConnect) {
+                        isComplete = await Ble.instance.connect();
+                        // if (!isComplete) {
+                        //   showDialog(
+                        //     //todo: change it
+                        //     context: context,
+                        //     builder: (BuildContext context) {
+                        //       return AlertDialog(
+                        //         title: Text('알림'),
+                        //         content: Text('연결에 실패했습니다.'),
+                        //         actions: [
+                        //           TextButton(
+                        //             child: Text('확인'),
+                        //             onPressed: () {
+                        //               Navigator.of(context).pop();
+                        //             },
+                        //           ),
+                        //         ],
+                        //       );
+                        //     },
+                        //   );
+                        // }
                       } else {
-                        Ble.instance.disconnect();
+                        isComplete = await Ble.instance.disconnect();
                       }
-                      // }
                     },
                   ),
                 ],
@@ -183,7 +198,7 @@ class _MainScreen extends State<MainPage> {
                     borderRadius: 30.0,
                     padding: 2.0,
                     onToggle: (val) {
-                      lightOnOff = val;
+                      setState(() => lightOnOff = val);
                       Ble.instance.toggleLed(val);
                     },
                   ),
