@@ -30,9 +30,9 @@ class LedStatus {
       );
     }
     return LedStatus(
-      isOn: reader.getUint32(0) != 0,
-      brightness: reader.getUint32(4),
-      color: reader.getUint32(8),
+      isOn: reader.getUint32(0, Endian.little) != 0,
+      brightness: reader.getUint32(4, Endian.little),
+      color: reader.getUint32(8, Endian.little),
     );
   }
 
@@ -40,9 +40,9 @@ class LedStatus {
     final buffer = Uint8List(12).buffer;
     final writer = ByteData.view(buffer);
 
-    writer.setUint32(0, isOn ? 1 : 0);
-    writer.setUint32(4, brightness);
-    writer.setUint32(8, color);
+    writer.setUint32(0, isOn ? 1 : 0, Endian.little);
+    writer.setUint32(4, brightness, Endian.little);
+    writer.setUint32(8, color, Endian.little);
     return buffer.asUint8List();
   }
 }
@@ -196,14 +196,6 @@ class Ble {
     // await readLedStatus();
   }
 
-  Future<void> changeLedColor(Color c) async {
-    //  print("change color: $r, $g, $b");
-    await characteristic?.write([
-      ...Protocol.map['TEST_STATUS'] ?? [],
-      ...[c.red, c.green, c.blue]
-    ]);
-  }
-
   Future<void> readLedStatus() async {
     try {
       print("read_status after write cmd");
@@ -228,12 +220,21 @@ class Ble {
     return;
   }
 
+  Future<void> changeLedColor(Color c) async {
+    //  print("change color: $r, $g, $b");
+    LedStatus status = getLedStatus();
+    status.color = c.value;
+
+    await characteristic
+        ?.write((Protocol.map['TEST_STATUS'] ?? []) + status.toBytes());
+  }
+
   //save current color into flash.
   Future<void> applyColor(Color c) async {
-    await characteristic?.write([
-      ...Protocol.map['TEST_STATUS'] ?? [],
-      ...[c.red, c.green, c.blue]
-    ]);
+    LedStatus status = getLedStatus();
+    status.color = c.value;
+    await characteristic
+        ?.write((Protocol.map['WRITE_STATUS'] ?? []) + status.toBytes());
   }
 
   Future<void> controllBrightness(int val) async {
