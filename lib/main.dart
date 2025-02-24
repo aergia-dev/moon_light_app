@@ -143,6 +143,7 @@ class _MainScreen extends State<MainPage> {
   bool lightOnOff = false;
   Color currentColor = Colors.white;
   Color backupColor = Colors.white;
+  bool isConnecting = false;
 
   @override
   void initState() {
@@ -290,18 +291,28 @@ class _MainScreen extends State<MainPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: Icon(
-                            Icons.bluetooth,
-                            color: lightConnected
-                                ? const Color.fromARGB(255, 125, 195, 253)
-                                : Colors.white,
-                            size: 28,
-                          ),
+                          icon: isConnecting
+                              ? CircularProgressIndicator(
+                                  color: Colors.blueAccent,
+                                )
+                              : Icon(
+                                  Icons.bluetooth,
+                                  color: lightConnected
+                                      ? const Color.fromARGB(255, 125, 195, 253)
+                                      : Colors.white,
+                                  size: 28,
+                                ),
                           onPressed: () async {
                             if (lightConnected) {
                               await Ble.instance.disconnect();
                             } else {
+                              setState(() {
+                                isConnecting = true;
+                              });
                               await Ble.instance.connect();
+                              setState(() {
+                                isConnecting = false;
+                              });
                             }
                           },
                         ),
