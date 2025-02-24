@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'protocol.dart';
+import 'models/protocol.dart';
 import 'dart:convert';
 
 import 'dart:typed_data';
