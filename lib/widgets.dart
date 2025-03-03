@@ -201,13 +201,17 @@ class CharacteristicTile extends StatelessWidget {
               IconButton(
                 icon: Icon(
                   Icons.file_download,
-                  color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
+                  color: Theme.of(context).iconTheme.color
+                    ?..withValues(alpha: 0.5 * 255),
                 ),
                 onPressed: onReadPressed,
               ),
               IconButton(
                 icon: Icon(Icons.file_upload,
-                    color: Theme.of(context).iconTheme.color?.withOpacity(0.5)),
+                    color: Theme.of(context)
+                        .iconTheme
+                        .color
+                        ?.withValues(alpha: 0.5 * 255)),
                 onPressed: onWritePressed,
               ),
               IconButton(
@@ -215,7 +219,10 @@ class CharacteristicTile extends StatelessWidget {
                     characteristic.isNotifying
                         ? Icons.sync_disabled
                         : Icons.sync,
-                    color: Theme.of(context).iconTheme.color?.withOpacity(0.5)),
+                    color: Theme.of(context)
+                        .iconTheme
+                        .color
+                        ?.withValues(alpha: 0.5 * 255)),
                 onPressed: onNotificationPressed,
               )
             ],
@@ -263,14 +270,20 @@ class DescriptorTile extends StatelessWidget {
           IconButton(
             icon: Icon(
               Icons.file_download,
-              color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
+              color: Theme.of(context)
+                  .iconTheme
+                  .color
+                  ?.withValues(alpha: 0.5 * 255),
             ),
             onPressed: onReadPressed,
           ),
           IconButton(
             icon: Icon(
               Icons.file_upload,
-              color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
+              color: Theme.of(context)
+                  .iconTheme
+                  .color
+                  ?.withValues(alpha: 0.5 * 255),
             ),
             onPressed: onWritePressed,
           )

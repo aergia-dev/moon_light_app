@@ -1,10 +1,10 @@
+// ignore_for_file: avoid_print
+
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'models/protocol.dart';
-import 'dart:convert';
-
 import 'dart:typed_data';
 
 class LedStatus {
@@ -81,7 +81,7 @@ class Ble {
 
   Future<bool> connect() async {
     print("start scan");
-    bool is_connected = false;
+    bool isConnected = false;
 
     try {
       await FlutterBluePlus.stopScan();
@@ -92,7 +92,7 @@ class Ble {
             deviceFound = true;
             device = r.device;
             print("service name: $r.device.platformName ");
-            is_connected = await connectToDevice();
+            isConnected = await connectToDevice();
             break;
           }
         }
@@ -110,7 +110,7 @@ class Ble {
       print('Error during scanning: $e');
     }
 
-    return is_connected;
+    return isConnected;
   }
 
   Future<bool> connectToDevice() async {
@@ -180,9 +180,9 @@ class Ble {
     });
   }
 
-  void _handleNotification(List<int> value) {
-    print("_handleNotification: $value");
-  }
+  // void _handleNotification(List<int> value) {
+  //   print("_handleNotification: $value");
+  // }
 
   void toggleLed(bool onOff) async {
     print("toogleLed: $onOff");
@@ -223,8 +223,8 @@ class Ble {
   Future<void> changeLedColor(Color c) async {
     //  print("change color: $r, $g, $b");
     LedStatus status = getLedStatus();
-    status.color = c.value;
-
+    // status.color = c.value;
+    status.color = c.toARGB32();
     await characteristic
         ?.write((Protocol.map['TEST_STATUS'] ?? []) + status.toBytes());
   }
@@ -232,7 +232,8 @@ class Ble {
   //save current color into flash.
   Future<void> applyColor(Color c) async {
     LedStatus status = getLedStatus();
-    status.color = c.value;
+    // status.color = c.value;
+    status.color = c.toARGB32();
     await characteristic
         ?.write((Protocol.map['WRITE_STATUS'] ?? []) + status.toBytes());
   }

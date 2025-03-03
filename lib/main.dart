@@ -1,6 +1,6 @@
+import 'package:esp32_led_app/moon_rendering_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:flutter_switch/flutter_switch.dart';
 import "ble.dart";
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -18,7 +18,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        textTheme: TextTheme(
+        textTheme: const TextTheme(
           bodyMedium: TextStyle(
               fontFamily: 'Roboto', fontSize: 16, color: Colors.black),
           bodySmall: TextStyle(
@@ -32,16 +32,16 @@ class MyApp extends StatelessWidget {
       ),
       color: Colors.lightBlue,
       home: StreamBuilder<BluetoothAdapterState>(
-          stream: FlutterBluePlus.adapterState,
-          initialData: BluetoothAdapterState.unknown,
-          builder: (c, snapshot) {
-            final state = snapshot.data;
-            if (state == BluetoothAdapterState.on) {
-              return const MainPage();
-            }
-
-            return const BluetoothPermission();
-          }),
+        stream: FlutterBluePlus.adapterState,
+        initialData: BluetoothAdapterState.unknown,
+        builder: (c, snapshot) {
+          final state = snapshot.data;
+          if (state == BluetoothAdapterState.on) {
+            return const MainPage();
+          }
+          return const BluetoothPermission();
+        },
+      ),
     );
   }
 }
@@ -135,15 +135,17 @@ class MainPage extends StatefulWidget {
   const MainPage({super.key});
 
   @override
-  _MainScreen createState() => _MainScreen();
+  MainScreen createState() => MainScreen();
 }
 
-class _MainScreen extends State<MainPage> {
+class MainScreen extends State<MainPage> {
   bool lightConnected = false;
   bool lightOnOff = false;
   Color currentColor = Colors.white;
   Color backupColor = Colors.white;
   bool isConnecting = false;
+  String deviceName = "No Device";
+  double brightness = 70.0;
 
   @override
   void initState() {
@@ -162,6 +164,7 @@ class _MainScreen extends State<MainPage> {
         lightConnected = (state == BluetoothConnectionState.connected);
         if (!lightConnected) {
           lightOnOff = false;
+          deviceName = "No Device";
         }
       });
     });
@@ -173,8 +176,40 @@ class _MainScreen extends State<MainPage> {
     Ble.instance.ready.stream.listen((ready) async {
       if (ready) {
         await Ble.instance.readLedStatus();
+
+        // Update device name when connected
+        if (Ble.instance.device != null) {
+          setState(() {
+            deviceName = Ble.instance.device!.platformName;
+            if (deviceName.isEmpty) {
+              deviceName = Ble.instance.device!.remoteId.toString();
+            }
+          });
+        }
       }
     });
+  }
+
+  Color adjustBrightness(Color color, double targetBrightness) {
+    int r = color.r as int;
+    int g = color.g as int;
+    int b = color.b as int;
+
+    double luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+
+    double targetLuminance = targetBrightness * 255 / 100;
+
+    double brightnessRatio = targetLuminance / luminance;
+
+    int newR = (r * brightnessRatio).round();
+    int newG = (g * brightnessRatio).round();
+    int newB = (b * brightnessRatio).round();
+
+    newR = newR.clamp(0, 255);
+    newG = newG.clamp(0, 255);
+    newB = newB.clamp(0, 255);
+
+    return Color.fromARGB(255, newR, newG, newB);
   }
 
   void changeColor(Color color) {
@@ -184,289 +219,279 @@ class _MainScreen extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.indigo.shade800, Colors.indigo.shade300],
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/background.gif',
+              fit: BoxFit.cover,
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        lightOnOff ? Icons.lightbulb : Icons.lightbulb_outline,
-                        size: 120,
-                        color: lightOnOff
-                            ? currentColor
-                            : currentColor.withOpacity(0.3),
+          SizedBox(
+            width: double.infinity,
+            height: double.infinity,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    alignment: Alignment.center,
+                    child: Text(
+                      deviceName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: 20),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  "밝기",
-                                  style: TextStyle(
-                                      color: Colors.white, fontSize: 16),
-                                ),
-                                FlutterSwitch(
-                                  value: true,
-                                  width: 45.0,
-                                  height: 25.0,
-                                  toggleSize: 18.0,
-                                  borderRadius: 30.0,
-                                  padding: 2.0,
-                                  activeColor: Colors.blueAccent,
-                                  onToggle: (val) {},
-                                ),
-                              ],
-                            ),
-                            Slider(
-                              value: 0.7,
-                              onChanged: (value) {},
-                              activeColor: Colors.white,
-                              inactiveColor: Colors.white24,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  "색상",
-                                  style: TextStyle(
-                                      color: Colors.white, fontSize: 16),
-                                ),
-                                FlutterSwitch(
-                                  value: true,
-                                  width: 45.0,
-                                  height: 25.0,
-                                  toggleSize: 18.0,
-                                  borderRadius: 30.0,
-                                  padding: 2.0,
-                                  activeColor: Colors.blueAccent,
-                                  onToggle: (val) {},
-                                ),
-                              ],
-                            ),
-                            Slider(
-                              value: 0.5,
-                              onChanged: (value) {},
-                              activeColor: Colors.white,
-                              inactiveColor: Colors.white24,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: isConnecting
-                              ? CircularProgressIndicator(
-                                  color: Colors.blueAccent,
-                                )
-                              : Icon(
-                                  Icons.bluetooth,
-                                  color: lightConnected
-                                      ? const Color.fromARGB(255, 125, 195, 253)
-                                      : Colors.white,
-                                  size: 28,
-                                ),
-                          onPressed: () async {
-                            if (lightConnected) {
-                              await Ble.instance.disconnect();
-                            } else {
-                              setState(() {
-                                isConnecting = true;
-                              });
-                              await Ble.instance.connect();
-                              setState(() {
-                                isConnecting = false;
-                              });
-                            }
-                          },
-                        ),
-                        Text(
-                          "Connect",
-                          style: TextStyle(color: Colors.white, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            lightOnOff
-                                ? Icons.lightbulb
-                                : Icons.lightbulb_outline,
-                            color: lightOnOff
-                                ? const Color.fromARGB(255, 125, 195, 253)
-                                : Colors.white,
-                            size: 28,
+                  Expanded(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(
+                            width: 400,
+                            height: 400,
+                            child: Moon3D(),
                           ),
-                          onPressed: () {
-                            setState(() => lightOnOff = !lightOnOff);
-                            Ble.instance.toggleLed(lightOnOff);
-                          },
-                        ),
-                        Text(
-                          "On/Off",
-                          style: TextStyle(color: Colors.white, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            Icons.palette,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  titlePadding: const EdgeInsets.all(0.0),
-                                  contentPadding: const EdgeInsets.all(0.0),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25.0),
-                                  ),
-                                  content: SingleChildScrollView(
-                                    child: Column(
-                                      children: [
-                                        SlidePicker(
-                                          pickerColor: currentColor,
-                                          onColorChanged: changeColor,
-                                          enableAlpha: false,
-                                          displayThumbColor: true,
-                                          showIndicator: true,
-                                          indicatorBorderRadius:
-                                              const BorderRadius.vertical(
-                                                  top: Radius.circular(25.0)),
-                                        ),
-                                        const SizedBox(height: 20),
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceEvenly,
-                                          children: <Widget>[
-                                            ElevatedButton(
-                                              onPressed: () {
-                                                Ble.instance
-                                                    .applyColor(currentColor);
-                                                backupColor = currentColor;
-                                                Navigator.of(context).pop();
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                foregroundColor: Colors.white,
-                                                backgroundColor: Colors.blue,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 30,
-                                                        vertical: 15),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                ),
-                                              ),
-                                              child: const Text("Apply"),
-                                            ),
-                                            ElevatedButton(
-                                              onPressed: () {
-                                                setState(() {
-                                                  currentColor = backupColor;
-                                                });
-                                                Navigator.of(context).pop();
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                foregroundColor: Colors.white,
-                                                backgroundColor: Colors.blue,
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 30,
-                                                        vertical: 15),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                ),
-                                              ),
-                                              child: const Text("revert"),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 10),
-                                      ],
+                          const SizedBox(height: 20),
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 24.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      "밝기",
+                                      style: TextStyle(
+                                          color: Colors.white, fontSize: 16),
                                     ),
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                        Text(
-                          "Color",
-                          style: TextStyle(color: Colors.white, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(
-                            Icons.settings,
-                            color: Colors.white,
-                            size: 28,
+                                  ],
+                                ),
+                                Slider(
+                                  value: brightness,
+                                  min: 0,
+                                  max: 100,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      brightness = value;
+                                      currentColor = adjustBrightness(
+                                          backupColor, brightness);
+                                    });
+                                    Ble.instance.applyColor(currentColor);
+                                  },
+                                  activeColor: Colors.white,
+                                  inactiveColor: Colors.white,
+                                ),
+                              ],
+                            ),
                           ),
-                          onPressed: () {
-                            // 설정 popup?
-                          },
+                        ],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: isConnecting
+                                  ? const CircularProgressIndicator(
+                                      color: Colors.blueAccent,
+                                    )
+                                  : Icon(
+                                      Icons.bluetooth,
+                                      color: lightConnected
+                                          ? const Color.fromARGB(
+                                              255, 125, 195, 253)
+                                          : Colors.white,
+                                      size: 28,
+                                    ),
+                              onPressed: () async {
+                                if (lightConnected) {
+                                  await Ble.instance.disconnect();
+                                } else {
+                                  setState(() {
+                                    isConnecting = true;
+                                  });
+                                  await Ble.instance.connect();
+                                  setState(() {
+                                    isConnecting = false;
+                                  });
+                                }
+                              },
+                            ),
+                          ],
                         ),
-                        Text(
-                          "Settings",
-                          style: TextStyle(color: Colors.white, fontSize: 12),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                lightOnOff
+                                    ? Icons.lightbulb
+                                    : Icons.lightbulb_outline,
+                                color: lightConnected
+                                    ? (lightOnOff
+                                        ? const Color.fromARGB(
+                                            255, 125, 195, 253)
+                                        : Colors.white)
+                                    : Colors.white.withValues(alpha: 127),
+                                size: 28,
+                              ),
+                              onPressed: lightConnected
+                                  ? () {
+                                      setState(() => lightOnOff = !lightOnOff);
+                                      Ble.instance.toggleLed(lightOnOff);
+                                    }
+                                  : null,
+                            ),
+                            Text(
+                              "On/Off",
+                              style: TextStyle(
+                                color: lightConnected
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 127),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(
+                                Icons.palette,
+                                color: lightConnected
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 127),
+                                size: 28,
+                              ),
+                              onPressed: lightConnected
+                                  ? () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (BuildContext context) {
+                                          return AlertDialog(
+                                            titlePadding:
+                                                const EdgeInsets.all(0.0),
+                                            contentPadding:
+                                                const EdgeInsets.all(0.0),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(25.0),
+                                            ),
+                                            content: SingleChildScrollView(
+                                              child: Column(
+                                                children: [
+                                                  SlidePicker(
+                                                    pickerColor: currentColor,
+                                                    onColorChanged: changeColor,
+                                                    enableAlpha: false,
+                                                    displayThumbColor: true,
+                                                    showIndicator: true,
+                                                    indicatorBorderRadius:
+                                                        const BorderRadius
+                                                            .vertical(
+                                                            top:
+                                                                Radius.circular(
+                                                                    25.0)),
+                                                  ),
+                                                  const SizedBox(height: 20),
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceEvenly,
+                                                    children: <Widget>[
+                                                      ElevatedButton(
+                                                        onPressed: () {
+                                                          Ble.instance
+                                                              .applyColor(
+                                                                  currentColor);
+                                                          backupColor =
+                                                              currentColor;
+                                                          Navigator.of(context)
+                                                              .pop();
+                                                        },
+                                                        style: ElevatedButton
+                                                            .styleFrom(
+                                                          foregroundColor:
+                                                              Colors.white,
+                                                          backgroundColor:
+                                                              Colors.blueAccent,
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .all(12),
+                                                          shape:
+                                                              RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        25),
+                                                          ),
+                                                        ),
+                                                        child: const Text('적용'),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    }
+                                  : null,
+                            ),
+                            Text(
+                              "색상 변경",
+                              style: TextStyle(
+                                color: lightConnected
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 127),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.settings,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                              onPressed: () {
+                                // 설정 popup?
+                              },
+                            ),
+                            const Text(
+                              "Settings",
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 12),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
