@@ -223,9 +223,7 @@ class Ble {
   }
 
   Future<void> changeLedColor(Color c) async {
-    //  print("change color: $r, $g, $b");
     LedStatus status = getLedStatus();
-    // status.color = c.value;
     status.color = c.toARGB32();
     await characteristic
         ?.write((Protocol.map['TEST_STATUS'] ?? []) + status.toBytes());
@@ -234,13 +232,29 @@ class Ble {
   //save current color into flash.
   Future<void> applyColor(Color c) async {
     LedStatus status = getLedStatus();
-    // status.color = c.value;
     status.color = c.toARGB32();
     await characteristic
         ?.write((Protocol.map['WRITE_STATUS'] ?? []) + status.toBytes());
   }
 
-  Future<void> controllBrightness(int val) async {
-    await characteristic?.write([...Protocol.map['TEST_STATUS'] ?? [], val]);
+  static int prevBrightness = 0;
+  Future<void> applyBrightness(double val) async {
+    int intVal = val.round();
+    final int margin = 5;
+
+    if (((prevBrightness - intVal).abs() < margin &&
+            intVal >= 10 &&
+            intVal <= 90) ||
+        prevBrightness == intVal) {
+      return;
+    }
+
+    prevBrightness = intVal;
+    LedStatus status = getLedStatus();
+    status.brightness = intVal;
+
+    await characteristic?.write(
+        (Protocol.map['WRITE_STATUS'] ?? []) + status.toBytes(),
+        withoutResponse: true);
   }
 }

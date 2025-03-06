@@ -151,6 +151,7 @@ class MainScreen extends State<MainPage> {
   bool isConnecting = false;
   String deviceName = "No Device";
   double brightness = 70.0;
+  double prevBrightness = 70.0;
 
   @override
   void initState() {
@@ -197,27 +198,27 @@ class MainScreen extends State<MainPage> {
     Ble.instance.connect();
   }
 
-  Color adjustBrightness(Color color, double targetBrightness) {
-    int r = color.r as int;
-    int g = color.g as int;
-    int b = color.b as int;
+  // Color adjustBrightness(Color color, double targetBrightness) {
+  //   int r = color.r as int;
+  //   int g = color.g as int;
+  //   int b = color.b as int;
 
-    double luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+  //   double luminance = 0.299 * r + 0.587 * g + 0.114 * b;
 
-    double targetLuminance = targetBrightness * 255 / 100;
+  //   double targetLuminance = targetBrightness * 255 / 100;
 
-    double brightnessRatio = targetLuminance / luminance;
+  //   double brightnessRatio = targetLuminance / luminance;
 
-    int newR = (r * brightnessRatio).round();
-    int newG = (g * brightnessRatio).round();
-    int newB = (b * brightnessRatio).round();
+  //   int newR = (r * brightnessRatio).round();
+  //   int newG = (g * brightnessRatio).round();
+  //   int newB = (b * brightnessRatio).round();
 
-    newR = newR.clamp(0, 255);
-    newG = newG.clamp(0, 255);
-    newB = newB.clamp(0, 255);
+  //   newR = newR.clamp(0, 255);
+  //   newG = newG.clamp(0, 255);
+  //   newB = newB.clamp(0, 255);
 
-    return Color.fromARGB(255, newR, newG, newB);
-  }
+  //   return Color.fromARGB(255, newR, newG, newB);
+  // }
 
   void changeColor(Color color) {
     setState(() => currentColor = color);
@@ -287,10 +288,8 @@ class MainScreen extends State<MainPage> {
                                   onChanged: (value) {
                                     setState(() {
                                       brightness = value;
-                                      currentColor = adjustBrightness(
-                                          backupColor, brightness);
                                     });
-                                    Ble.instance.applyColor(currentColor);
+                                    Ble.instance.applyBrightness(brightness);
                                   },
                                   activeColor: Colors.white,
                                   inactiveColor: Colors.white,
