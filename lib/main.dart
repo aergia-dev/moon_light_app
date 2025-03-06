@@ -5,8 +5,11 @@ import "ble.dart";
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:lottie/lottie.dart';
+import 'preference_manager.dart';
 
 void main() {
+  final prefManger = PreferenceManager();
+  prefManger.init();
   runApp(const MyApp());
 }
 
