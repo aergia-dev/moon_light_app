@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'models/protocol.dart';
 import 'dart:typed_data';
+import 'preference_manager.dart';
 
 class LedStatus {
   bool isOn;
@@ -64,7 +65,6 @@ class Ble {
   bool lightState = false;
 
   StreamController ready = StreamController<bool>();
-  final String devName = "sleep_light";
   BluetoothDevice? device;
   BluetoothCharacteristic? characteristic;
 
@@ -82,10 +82,12 @@ class Ble {
   Future<bool> connect() async {
     print("start scan");
     bool isConnected = false;
+    final devName = PreferenceManager().deaultDevName;
 
     try {
       await FlutterBluePlus.stopScan();
       bool deviceFound = false;
+
       final subscription = FlutterBluePlus.scanResults.listen((results) async {
         for (ScanResult r in results) {
           if (r.device.platformName == devName && !deviceFound) {

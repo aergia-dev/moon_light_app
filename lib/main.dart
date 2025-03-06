@@ -8,8 +8,10 @@ import 'package:lottie/lottie.dart';
 import 'preference_manager.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   final prefManger = PreferenceManager();
   prefManger.init();
+
   runApp(const MyApp());
 }
 
@@ -191,6 +193,8 @@ class MainScreen extends State<MainPage> {
         }
       }
     });
+
+    Ble.instance.connect();
   }
 
   Color adjustBrightness(Color color, double targetBrightness) {
