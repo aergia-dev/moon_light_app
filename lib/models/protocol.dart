@@ -4,5 +4,7 @@ class Protocol {
     "WRITE_STATUS": [0x01, 0x02],
     "READ_STATUS": [0x01, 0x03],
     "TEST_STATUS": [0x01, 0x04],
+    "COLOR_CHANGE": [0x01, 0x05],
+    "BRITHNESS_CHANGE": [0x01, 0x06],
   };
 }
