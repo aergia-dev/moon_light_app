@@ -1,70 +1,32 @@
 // ignore_for_file: avoid_print
 
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'models/protocol.dart';
-import 'dart:typed_data';
-import 'preference_manager.dart';
 
-class LedStatus {
-  bool isOn;
-  int brightness;
-  int color;
+import '../models/led_status.dart';
+import '../models/protocol.dart';
+import '../utils/preference_manager.dart';
 
-  LedStatus({
-    this.isOn = false,
-    this.brightness = 0,
-    this.color = 0,
-  });
+class BleService {
+  static final BleService _instance = BleService._internal();
+  static BleService get instance => _instance;
 
-  factory LedStatus.fromBytes(List<int> bytes) {
-    final dataBytes = bytes.sublist(1);
-    final buffer = Uint8List.fromList(dataBytes).buffer;
-    final reader = ByteData.view(buffer);
-    if (reader.lengthInBytes == 0) {
-      return LedStatus(
-        isOn: false,
-        brightness: 0,
-        color: 0,
-      );
-    }
-    return LedStatus(
-      isOn: reader.getUint32(0, Endian.little) != 0,
-      brightness: reader.getUint32(4, Endian.little),
-      color: reader.getUint32(8, Endian.little),
-    );
+  factory BleService() {
+    return _instance;
   }
 
-  List<int> toBytes() {
-    final buffer = Uint8List(12).buffer;
-    final writer = ByteData.view(buffer);
+  BleService._internal();
 
-    writer.setUint32(0, isOn ? 1 : 0, Endian.little);
-    writer.setUint32(4, brightness, Endian.little);
-    writer.setUint32(8, color, Endian.little);
-    return buffer.asUint8List();
-  }
-}
-
-class Ble {
-  static final Ble _instance = Ble();
-
-  static Ble get instance => _instance;
   var _ledStatus = LedStatus(isOn: false, brightness: 0, color: 0);
-
-  // int current_color;
-  // Color currentColor;
+  bool lightState = false;
 
   StreamController currentColorController = StreamController<Color>();
   StreamController stateController =
       StreamController<BluetoothConnectionState>();
-
   StreamController lightOnOffController = StreamController<bool>();
-  bool lightState = false;
-
   StreamController ready = StreamController<bool>();
+
   BluetoothDevice? device;
   BluetoothCharacteristic? characteristic;
 
@@ -90,10 +52,11 @@ class Ble {
 
       final subscription = FlutterBluePlus.scanResults.listen((results) async {
         for (ScanResult r in results) {
+          print("Found device: ${r.device.platformName}");
           if (r.device.platformName == devName && !deviceFound) {
             deviceFound = true;
             device = r.device;
-            print("service name: $r.device.platformName ");
+            print("service name: ${r.device.platformName}");
             isConnected = await connectToDevice();
             break;
           }
@@ -106,8 +69,6 @@ class Ble {
         print("device not found");
         subscription.cancel();
       }
-
-      // 오류 처리
     } catch (e) {
       print('Error during scanning: $e');
     }
@@ -119,11 +80,9 @@ class Ble {
     if (device == null) return false;
 
     try {
-      // 연결
       await device!.connect();
       print("bt connect");
 
-      // 상태 변경 모니터링
       device!.connectionState.listen((state) {
         stateController.add(state);
 
@@ -132,15 +91,12 @@ class Ble {
         }
       });
 
-      // 서비스 검색
       List<BluetoothService> services = await device!.discoverServices();
       for (BluetoothService service in services) {
         if (service.uuid.toString() == serviceUUID) {
           for (BluetoothCharacteristic c in service.characteristics) {
             if (c.uuid.toString() == characteristicUUID) {
               characteristic = c;
-              // await characteristic?.setNotifyValue(true);
-              //characteristic?.lastValueStream.listen(_handleNotification);
               ready.add(true);
               return true;
             } else {
@@ -158,7 +114,6 @@ class Ble {
     return false;
   }
 
-  // 연결 해제 메소드
   Future<bool> disconnect() async {
     if (device != null) {
       try {
@@ -182,20 +137,18 @@ class Ble {
     });
   }
 
-  // void _handleNotification(List<int> value) {
-  //   print("_handleNotification: $value");
-  // }
-
   void toggleLed(bool onOff) async {
     print("toogleLed: $onOff");
 
     LedStatus status = getLedStatus();
     status.isOn = onOff;
 
-    await characteristic?.write(
-        (Protocol.map['WRITE_STATUS'] ?? []) + getLedStatus().toBytes());
-
-    // await readLedStatus();
+    try {
+      await characteristic?.write(
+          (Protocol.map['WRITE_STATUS'] ?? []) + getLedStatus().toBytes());
+    } catch (e) {
+      print("Error toggling LED: $e");
+    }
   }
 
   Future<void> readLedStatus() async {
@@ -205,56 +158,79 @@ class Ble {
     } catch (e) {
       print("write error?: $e");
     }
-    List<int>? read = await characteristic?.read();
-    if (read != null) {
-      LedStatus status = LedStatus.fromBytes(read);
-      Color color = Color(status.color);
 
-      print("status - color : ${status.color}");
-      print("status - isOn : ${status.isOn}");
+    try {
+      List<int>? read = await characteristic?.read();
+      if (read != null) {
+        LedStatus status = LedStatus.fromBytes(read);
+        Color color = Color(status.color);
 
-      currentColorController.add(color);
-      lightOnOffController.add(status.isOn);
-      lightState = status.isOn;
-      updateLedStatus(status);
+        print("status - color : ${status.color}");
+        print("status - isOn : ${status.isOn}");
+
+        currentColorController.add(color);
+        lightOnOffController.add(status.isOn);
+        lightState = status.isOn;
+        updateLedStatus(status);
+      }
+    } catch (e) {
+      print("Error reading LED status: $e");
     }
 
     return;
   }
 
   Future<void> changeLedColor(Color c) async {
-    LedStatus status = getLedStatus();
-    status.color = c.toARGB32();
-    await characteristic
-        ?.write((Protocol.map['TEST_STATUS'] ?? []) + status.toBytes());
+    try {
+      LedStatus status = getLedStatus();
+      status.color = c.toARGB32();
+      await characteristic
+          ?.write((Protocol.map['TEST_STATUS'] ?? []) + status.toBytes());
+    } catch (e) {
+      print("Error changing LED color: $e");
+    }
   }
 
-  //save current color into flash.
   Future<void> applyColor(Color c) async {
-    LedStatus status = getLedStatus();
-    status.color = c.toARGB32();
-    await characteristic
-        ?.write((Protocol.map['WRITE_STATUS'] ?? []) + status.toBytes());
+    try {
+      LedStatus status = getLedStatus();
+      status.color = c.toARGB32();
+      await characteristic
+          ?.write((Protocol.map['WRITE_STATUS'] ?? []) + status.toBytes());
+    } catch (e) {
+      print("Error applying color: $e");
+    }
   }
 
   static int prevBrightness = 0;
   Future<void> applyBrightness(double val) async {
-    int intVal = val.round();
-    final int margin = 5;
+    try {
+      int intVal = val.round();
+      final int margin = 5;
 
-    if (((prevBrightness - intVal).abs() < margin &&
-            intVal >= 10 &&
-            intVal <= 90) ||
-        prevBrightness == intVal) {
-      return;
+      if (((prevBrightness - intVal).abs() < margin &&
+              intVal >= 10 &&
+              intVal <= 90) ||
+          prevBrightness == intVal) {
+        return;
+      }
+
+      prevBrightness = intVal;
+      LedStatus status = getLedStatus();
+      status.brightness = intVal;
+
+      await characteristic?.write(
+          (Protocol.map['WRITE_STATUS'] ?? []) + status.toBytes(),
+          withoutResponse: true);
+    } catch (e) {
+      print("Error applying brightness: $e");
     }
+  }
 
-    prevBrightness = intVal;
-    LedStatus status = getLedStatus();
-    status.brightness = intVal;
-
-    await characteristic?.write(
-        (Protocol.map['WRITE_STATUS'] ?? []) + status.toBytes(),
-        withoutResponse: true);
+  void dispose() {
+    currentColorController.close();
+    stateController.close();
+    lightOnOffController.close();
+    ready.close();
   }
 }

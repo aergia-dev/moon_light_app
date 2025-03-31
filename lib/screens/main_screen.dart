@@ -1,0 +1,268 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+
+import '../providers/ble_provider.dart';
+import '../widgets/moon_rendering_widget.dart';
+
+class MainScreen extends StatelessWidget {
+  const MainScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<BleProvider>(
+      builder: (context, bleProvider, child) {
+        return Scaffold(
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: Image.asset(
+                  'assets/background.gif',
+                  fit: BoxFit.cover,
+                ),
+              ),
+              SizedBox(
+                width: double.infinity,
+                height: double.infinity,
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
+                        alignment: Alignment.center,
+                        child: Text(
+                          bleProvider.deviceName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(
+                                width: 400,
+                                height: 400,
+                                child: Moon3D(),
+                              ),
+                              const SizedBox(height: 20),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 24.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "밝기",
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16),
+                                        ),
+                                      ],
+                                    ),
+                                    Slider(
+                                      value: bleProvider.brightness,
+                                      min: 0,
+                                      max: 100,
+                                      onChanged: (value) {
+                                        bleProvider.brightness = value;
+                                      },
+                                      activeColor: Colors.white,
+                                      inactiveColor: Colors.white,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      _buildBottomControls(context, bleProvider),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBottomControls(BuildContext context, BleProvider bleProvider) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: bleProvider.isConnecting
+                    ? const CircularProgressIndicator(
+                        color: Colors.blueAccent,
+                      )
+                    : Icon(
+                        Icons.bluetooth,
+                        color: bleProvider.lightConnected
+                            ? const Color.fromARGB(255, 125, 195, 253)
+                            : Colors.white,
+                        size: 28,
+                      ),
+                onPressed: () async {
+                  if (bleProvider.lightConnected) {
+                    await bleProvider.disconnectDevice();
+                  } else {
+                    await bleProvider.connectDevice();
+                  }
+                },
+              ),
+            ],
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(
+                  bleProvider.lightOnOff
+                      ? Icons.lightbulb
+                      : Icons.lightbulb_outline,
+                  color: bleProvider.lightConnected
+                      ? (bleProvider.lightOnOff
+                          ? const Color.fromARGB(255, 125, 195, 253)
+                          : Colors.white)
+                      : Colors.white.withValues(alpha: 127),
+                  size: 28,
+                ),
+                onPressed: bleProvider.lightConnected
+                    ? () {
+                        bleProvider.toggleLight();
+                      }
+                    : null,
+              ),
+              Text(
+                "On/Off",
+                style: TextStyle(
+                  color: bleProvider.lightConnected
+                      ? Colors.white
+                      : Colors.white.withAlpha(127),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.palette,
+                  color: bleProvider.lightConnected
+                      ? Colors.white
+                      : Colors.white.withAlpha(127),
+                  size: 28,
+                ),
+                onPressed: bleProvider.lightConnected
+                    ? () {
+                        _showColorPicker(context, bleProvider);
+                      }
+                    : null,
+              ),
+              Text(
+                "색상 변경",
+                style: TextStyle(
+                  color: bleProvider.lightConnected
+                      ? Colors.white
+                      : Colors.white.withOpacity(0.5),
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.settings,
+                  color: Colors.white,
+                  size: 28,
+                ),
+                onPressed: () {
+                  // 설정 popup?
+                },
+              ),
+              const Text(
+                "Settings",
+                style: TextStyle(color: Colors.white, fontSize: 12),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showColorPicker(BuildContext context, BleProvider bleProvider) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          titlePadding: const EdgeInsets.all(0.0),
+          contentPadding: const EdgeInsets.all(0.0),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(25.0),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                SlidePicker(
+                  pickerColor: bleProvider.currentColor,
+                  onColorChanged: (color) {
+                    bleProvider.currentColor = color;
+                  },
+                  enableAlpha: false,
+                  displayThumbColor: true,
+                  showIndicator: true,
+                  indicatorBorderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(25.0),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    ElevatedButton(
+                      onPressed: () {
+                        bleProvider.applyColor(bleProvider.currentColor);
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.blueAccent,
+                        padding: const EdgeInsets.all(12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                      ),
+                      child: const Text('적용'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
