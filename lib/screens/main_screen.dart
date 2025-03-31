@@ -56,27 +56,47 @@ class MainScreen extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Row(
+                                    Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
                                           "밝기",
                                           style: TextStyle(
-                                              color: Colors.white,
+                                              color: bleProvider.lightConnected
+                                                  ? Colors.white
+                                                  : Colors.white.withAlpha(127),
                                               fontSize: 16),
                                         ),
                                       ],
                                     ),
-                                    Slider(
-                                      value: bleProvider.brightness,
-                                      min: 0,
-                                      max: 100,
-                                      onChanged: (value) {
-                                        bleProvider.brightness = value;
-                                      },
-                                      activeColor: Colors.white,
-                                      inactiveColor: Colors.white,
+                                    SliderTheme(
+                                      data: SliderThemeData(
+                                        thumbColor: bleProvider.lightConnected
+                                            ? Colors.white
+                                            : Colors.grey.shade400,
+                                        activeTrackColor:
+                                            bleProvider.lightConnected
+                                                ? Colors.white
+                                                : Colors.grey.shade500,
+                                        inactiveTrackColor:
+                                            bleProvider.lightConnected
+                                                ? Colors.white.withAlpha(127)
+                                                : Colors.grey.shade700,
+                                        overlayColor: bleProvider.lightConnected
+                                            ? Colors.white.withAlpha(50)
+                                            : Colors.transparent,
+                                      ),
+                                      child: Slider(
+                                        value: bleProvider.brightness,
+                                        min: 0,
+                                        max: 100,
+                                        onChanged: bleProvider.lightConnected
+                                            ? (value) {
+                                                bleProvider.brightness = value;
+                                              }
+                                            : null,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -140,7 +160,7 @@ class MainScreen extends StatelessWidget {
                       ? (bleProvider.lightOnOff
                           ? const Color.fromARGB(255, 125, 195, 253)
                           : Colors.white)
-                      : Colors.white.withValues(alpha: 127),
+                      : Colors.white.withAlpha(127),
                   size: 28,
                 ),
                 onPressed: bleProvider.lightConnected
@@ -182,7 +202,7 @@ class MainScreen extends StatelessWidget {
                 style: TextStyle(
                   color: bleProvider.lightConnected
                       ? Colors.white
-                      : Colors.white.withOpacity(0.5),
+                      : Colors.white.withAlpha(127),
                   fontSize: 12,
                 ),
               ),
