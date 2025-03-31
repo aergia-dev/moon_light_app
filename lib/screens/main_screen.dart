@@ -5,8 +5,38 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../providers/ble_provider.dart';
 import '../widgets/moon_rendering_widget.dart';
 
-class MainScreen extends StatelessWidget {
+class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  bool _showConnectionError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final bleProvider = Provider.of<BleProvider>(context, listen: false);
+      if (!bleProvider.lightConnected &&
+          bleProvider.connectionError.isNotEmpty) {
+        setState(() {
+          _showConnectionError = true;
+        });
+
+        // 3초 후 자동으로 오류 메시지 숨기기
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            setState(() {
+              _showConnectionError = false;
+            });
+          }
+        });
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -110,6 +140,30 @@ class MainScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              // 연결 오류 메시지 표시
+              if (_showConnectionError)
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 60,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade700,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        '기기 연결에 실패했습니다',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         );

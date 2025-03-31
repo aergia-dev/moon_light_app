@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'providers/ble_provider.dart';
 import 'screens/bluetooth_permission_screen.dart';
-import 'screens/main_screen.dart';
+import 'screens/splash_screen.dart';
 import 'services/ble_service.dart';
 import 'utils/preference_manager.dart';
 
@@ -51,7 +51,7 @@ class MyApp extends StatelessWidget {
           builder: (c, snapshot) {
             final state = snapshot.data;
             if (state == BluetoothAdapterState.on) {
-              return const MainScreen();
+              return const SplashScreen();
             }
             return const BluetoothPermissionScreen();
           },

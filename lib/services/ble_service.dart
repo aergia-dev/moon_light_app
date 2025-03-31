@@ -21,11 +21,11 @@ class BleService {
   var _ledStatus = LedStatus(isOn: false, brightness: 0, color: 0);
   bool lightState = false;
 
-  StreamController currentColorController = StreamController<Color>();
+  StreamController currentColorController = StreamController<Color>.broadcast();
   StreamController stateController =
-      StreamController<BluetoothConnectionState>();
-  StreamController lightOnOffController = StreamController<bool>();
-  StreamController ready = StreamController<bool>();
+      StreamController<BluetoothConnectionState>.broadcast();
+  StreamController lightOnOffController = StreamController<bool>.broadcast();
+  StreamController ready = StreamController<bool>.broadcast();
 
   BluetoothDevice? device;
   BluetoothCharacteristic? characteristic;
@@ -42,7 +42,7 @@ class BleService {
   }
 
   Future<bool> connect() async {
-    print("start scan");
+    print("스캔 시작");
     bool isConnected = false;
     final devName = PreferenceManager().deaultDevName;
 
@@ -50,27 +50,43 @@ class BleService {
       await FlutterBluePlus.stopScan();
       bool deviceFound = false;
 
+      // 스캔 결과 구독
       final subscription = FlutterBluePlus.scanResults.listen((results) async {
+        print("스캔된 기기 수: ${results.length}");
+
         for (ScanResult r in results) {
-          print("Found device: ${r.device.platformName}");
-          if (r.device.platformName == devName && !deviceFound) {
+          print("발견된 기기: ${r.device.platformName}, ID: ${r.device.remoteId}");
+
+          // 기기 이름이 일치하거나(또는 지정된 UUID와 일치하는 경우)
+          if ((r.device.platformName == devName ||
+                  r.device.remoteId.toString().contains(devName)) &&
+              !deviceFound) {
             deviceFound = true;
             device = r.device;
-            print("service name: ${r.device.platformName}");
+            print("연결할 기기 찾음: ${r.device.platformName}");
+
+            // 스캔 중지
+            await FlutterBluePlus.stopScan();
+
+            // 기기에 연결 시도
             isConnected = await connectToDevice();
             break;
           }
         }
       });
 
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 4));
-      await Future.delayed(const Duration(seconds: 4));
+      // 스캔 시작 및 타임아웃 설정
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
+
+      // 스캔 완료를 기다림
+      await Future.delayed(const Duration(seconds: 5));
+
       if (!deviceFound) {
-        print("device not found");
+        print("기기를 찾을 수 없음");
         subscription.cancel();
       }
     } catch (e) {
-      print('Error during scanning: $e');
+      print('스캔 중 오류 발생: $e');
     }
 
     return isConnected;
@@ -80,10 +96,20 @@ class BleService {
     if (device == null) return false;
 
     try {
-      await device!.connect();
-      print("bt connect");
+      // 이미 연결되어 있는지 확인
+      if (device!.connectionState.first == BluetoothConnectionState.connected) {
+        print("이미 연결됨");
+        stateController.add(BluetoothConnectionState.connected);
+        return true;
+      }
 
+      print("기기에 연결 시도 중...");
+      await device!.connect(timeout: const Duration(seconds: 8));
+      print("블루투스 연결 성공");
+
+      // 연결 상태 모니터링
       device!.connectionState.listen((state) {
+        print("연결 상태 변경: $state");
         stateController.add(state);
 
         if (state == BluetoothConnectionState.disconnected) {
@@ -91,24 +117,34 @@ class BleService {
         }
       });
 
+      // 서비스 및 특성 탐색
+      print("서비스 탐색 중...");
       List<BluetoothService> services = await device!.discoverServices();
+      print("발견된 서비스 수: ${services.length}");
+
       for (BluetoothService service in services) {
-        if (service.uuid.toString() == serviceUUID) {
+        print("서비스 UUID: ${service.uuid}");
+
+        if (service.uuid.toString() == serviceUUID ||
+            service.uuid.toString().toLowerCase() ==
+                serviceUUID.toLowerCase()) {
           for (BluetoothCharacteristic c in service.characteristics) {
-            if (c.uuid.toString() == characteristicUUID) {
+            print("특성 UUID: ${c.uuid}");
+
+            if (c.uuid.toString() == characteristicUUID ||
+                c.uuid.toString().toLowerCase() ==
+                    characteristicUUID.toLowerCase()) {
               characteristic = c;
               ready.add(true);
               return true;
-            } else {
-              print("couldn't find a characteristic - check service uuid");
             }
           }
-        } else {
-          print("couldn't find a service - check service uuid");
+          print("일치하는 특성(characteristic)을 찾을 수 없음 - serviceUUID를 확인하세요");
         }
       }
+      print("일치하는 서비스를 찾을 수 없음 - serviceUUID를 확인하세요");
     } catch (e) {
-      print('Error connecting to device: $e');
+      print('기기 연결 중 오류 발생: $e');
     }
 
     return false;
@@ -119,26 +155,27 @@ class BleService {
       try {
         await device!.disconnect();
       } catch (e) {
-        print('Error disconnecting: $e');
+        print('연결 해제 중 오류 발생: $e');
         return false;
       }
       return true;
     } else {
-      print("already disconnected");
+      print("이미 연결 해제됨");
       return true;
     }
   }
 
   void init() async {
-    print("init");
+    print("초기화");
 
     FlutterBluePlus.scanResults.listen((results) async {
+      // 스캔 결과 로깅이 많으므로 주석 처리함
       // print("results: $results");
     });
   }
 
   void toggleLed(bool onOff) async {
-    print("toogleLed: $onOff");
+    print("토글LED: $onOff");
 
     LedStatus status = getLedStatus();
     status.isOn = onOff;
@@ -147,16 +184,16 @@ class BleService {
       await characteristic?.write(
           (Protocol.map['WRITE_STATUS'] ?? []) + getLedStatus().toBytes());
     } catch (e) {
-      print("Error toggling LED: $e");
+      print("LED 토글 중 오류: $e");
     }
   }
 
   Future<void> readLedStatus() async {
     try {
-      print("read_status after write cmd");
+      print("쓰기 후 LED 상태 읽기");
       await characteristic?.write(Protocol.map['READ_STATUS'] ?? []);
     } catch (e) {
-      print("write error?: $e");
+      print("쓰기 오류?: $e");
     }
 
     try {
@@ -165,8 +202,8 @@ class BleService {
         LedStatus status = LedStatus.fromBytes(read);
         Color color = Color(status.color);
 
-        print("status - color : ${status.color}");
-        print("status - isOn : ${status.isOn}");
+        print("상태 - 색상: ${status.color}");
+        print("상태 - 켜짐: ${status.isOn}");
 
         currentColorController.add(color);
         lightOnOffController.add(status.isOn);
@@ -174,7 +211,7 @@ class BleService {
         updateLedStatus(status);
       }
     } catch (e) {
-      print("Error reading LED status: $e");
+      print("LED 상태 읽기 중 오류: $e");
     }
 
     return;
@@ -183,22 +220,22 @@ class BleService {
   Future<void> changeLedColor(Color c) async {
     try {
       LedStatus status = getLedStatus();
-      status.color = c.toARGB32();
+      status.color = c.value;
       await characteristic
           ?.write((Protocol.map['TEST_STATUS'] ?? []) + status.toBytes());
     } catch (e) {
-      print("Error changing LED color: $e");
+      print("LED 색상 변경 중 오류: $e");
     }
   }
 
   Future<void> applyColor(Color c) async {
     try {
       LedStatus status = getLedStatus();
-      status.color = c.toARGB32();
+      status.color = c.value;
       await characteristic
           ?.write((Protocol.map['WRITE_STATUS'] ?? []) + status.toBytes());
     } catch (e) {
-      print("Error applying color: $e");
+      print("색상 적용 중 오류: $e");
     }
   }
 
@@ -223,7 +260,7 @@ class BleService {
           (Protocol.map['WRITE_STATUS'] ?? []) + status.toBytes(),
           withoutResponse: true);
     } catch (e) {
-      print("Error applying brightness: $e");
+      print("밝기 적용 중 오류: $e");
     }
   }
 

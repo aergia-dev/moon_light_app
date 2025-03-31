@@ -15,8 +15,9 @@ class BleProvider extends ChangeNotifier {
   Color _currentColor = Colors.white;
   Color _backupColor = Colors.white;
   bool _isConnecting = false;
-  String _deviceName = "No Device";
+  String _deviceName = "연결된 기기 없음";
   double _brightness = 70.0;
+  String _connectionError = '';
 
   bool get lightConnected => _lightConnected;
   bool get lightOnOff => _lightOnOff;
@@ -25,6 +26,7 @@ class BleProvider extends ChangeNotifier {
   bool get isConnecting => _isConnecting;
   String get deviceName => _deviceName;
   double get brightness => _brightness;
+  String get connectionError => _connectionError;
 
   set currentColor(Color color) {
     _currentColor = color;
@@ -40,7 +42,7 @@ class BleProvider extends ChangeNotifier {
   BleProvider() {
     _bleService.init();
     _initListeners();
-    _bleService.connect();
+    // 생성자에서 자동 연결 제거 (SplashScreen에서 호출하도록 변경)
   }
 
   void _initListeners() {
@@ -54,7 +56,7 @@ class BleProvider extends ChangeNotifier {
       _lightConnected = (state == BluetoothConnectionState.connected);
       if (!_lightConnected) {
         _lightOnOff = false;
-        _deviceName = "No Device";
+        _deviceName = "연결된 기기 없음";
       }
       notifyListeners();
     });
@@ -79,14 +81,27 @@ class BleProvider extends ChangeNotifier {
     });
   }
 
-  Future<void> connectDevice() async {
+  Future<bool> connectDevice() async {
     _isConnecting = true;
+    _connectionError = '';
     notifyListeners();
 
-    await _bleService.connect();
+    try {
+      final connected = await _bleService.connect();
+      _isConnecting = false;
 
-    _isConnecting = false;
-    notifyListeners();
+      if (!connected) {
+        _connectionError = '기기 연결 실패';
+      }
+
+      notifyListeners();
+      return connected;
+    } catch (e) {
+      _isConnecting = false;
+      _connectionError = '연결 오류: $e';
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<void> disconnectDevice() async {
