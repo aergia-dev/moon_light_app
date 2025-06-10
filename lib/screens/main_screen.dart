@@ -4,6 +4,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 import '../providers/ble_provider.dart';
 import '../widgets/moon_rendering_widget.dart';
+import 'settings_screen.dart'; // 추가된 import
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -272,7 +273,12 @@ class _MainScreenState extends State<MainScreen> {
                   size: 28,
                 ),
                 onPressed: () {
-                  // 설정 popup?
+                  // 설정 화면으로 이동
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
                 },
               ),
               const Text(

@@ -58,7 +58,12 @@ class BleProvider extends ChangeNotifier {
 
     _bleService.stateController.stream.listen((state) {
       _lightConnected = (state == BluetoothConnectionState.connected);
-      if (!_lightConnected) {
+
+      // 연결 상태 변경시 로딩 상태도 업데이트
+      if (state == BluetoothConnectionState.connected) {
+        _isConnecting = false; // 연결 성공시 로딩 중단
+      } else if (state == BluetoothConnectionState.disconnected) {
+        _isConnecting = false; // 연결 해제시도 로딩 중단
         _lightOnOff = false;
         _deviceName = "연결된 기기 없음";
       }
@@ -92,6 +97,8 @@ class BleProvider extends ChangeNotifier {
 
     try {
       final connected = await _bleService.connect();
+
+      // 연결 결과에 관계없이 로딩 상태 해제
       _isConnecting = false;
 
       if (!connected) {
@@ -109,7 +116,12 @@ class BleProvider extends ChangeNotifier {
   }
 
   Future<void> disconnectDevice() async {
+    _isConnecting = true; // 연결 해제 중 표시
+    notifyListeners();
+
     await _bleService.disconnect();
+
+    // disconnect는 stateController를 통해 자동으로 _isConnecting이 false가 됨
   }
 
   void toggleLight() {
