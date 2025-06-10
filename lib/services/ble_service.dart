@@ -47,20 +47,30 @@ class BleService {
     final devName = PreferenceManager().deaultDevName;
 
     try {
+      // 이전 스캔 중지
       await FlutterBluePlus.stopScan();
+
+      // 잠시 대기
+      await Future.delayed(const Duration(milliseconds: 500));
+
       bool deviceFound = false;
+      List<ScanResult> allResults = [];
 
       // 스캔 결과 구독
       final subscription = FlutterBluePlus.scanResults.listen((results) async {
         print("스캔된 기기 수: ${results.length}");
+        allResults = results;
 
         for (ScanResult r in results) {
-          print("발견된 기기: ${r.device.platformName}, ID: ${r.device.remoteId}");
+          String deviceName = r.device.platformName.isNotEmpty
+              ? r.device.platformName
+              : "Unknown";
 
-          // 기기 이름이 일치하거나(또는 지정된 UUID와 일치하는 경우)
-          if ((r.device.platformName == devName ||
-                  r.device.remoteId.toString().contains(devName)) &&
-              !deviceFound) {
+          print(
+              "발견된 기기: $deviceName, ID: ${r.device.remoteId}, RSSI: ${r.rssi}");
+
+          // 기기 이름이 일치하는지 확인
+          if ((r.device.platformName == devName) && !deviceFound) {
             deviceFound = true;
             device = r.device;
             print("연결할 기기 찾음: ${r.device.platformName}");
@@ -75,13 +85,25 @@ class BleService {
         }
       });
 
-      // 스캔 시작 및 타임아웃 설정
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
+      // 더 강력한 스캔 옵션으로 시작
+      await FlutterBluePlus.startScan(
+        timeout: const Duration(seconds: 10),
+        androidUsesFineLocation: true,
+      );
 
       // 스캔 완료를 기다림
-      await Future.delayed(const Duration(seconds: 5));
+      await Future.delayed(const Duration(seconds: 10));
 
       if (!deviceFound) {
+        print("=== 스캔 완료 후 결과 ===");
+        print("총 발견된 기기 수: ${allResults.length}");
+        for (ScanResult r in allResults) {
+          String deviceName = r.device.platformName.isNotEmpty
+              ? r.device.platformName
+              : "Unknown";
+          print("기기: $deviceName (${r.device.remoteId})");
+        }
+        print("찾는 기기 이름: '$devName'");
         print("기기를 찾을 수 없음");
         subscription.cancel();
       }
@@ -96,13 +118,6 @@ class BleService {
     if (device == null) return false;
 
     try {
-      // 이미 연결되어 있는지 확인
-      if (device!.connectionState.first == BluetoothConnectionState.connected) {
-        print("이미 연결됨");
-        stateController.add(BluetoothConnectionState.connected);
-        return true;
-      }
-
       print("기기에 연결 시도 중...");
       await device!.connect(timeout: const Duration(seconds: 8));
       print("블루투스 연결 성공");
@@ -125,15 +140,11 @@ class BleService {
       for (BluetoothService service in services) {
         print("서비스 UUID: ${service.uuid}");
 
-        if (service.uuid.toString() == serviceUUID ||
-            service.uuid.toString().toLowerCase() ==
-                serviceUUID.toLowerCase()) {
+        if (service.uuid.toString() == serviceUUID) {
           for (BluetoothCharacteristic c in service.characteristics) {
             print("특성 UUID: ${c.uuid}");
 
-            if (c.uuid.toString() == characteristicUUID ||
-                c.uuid.toString().toLowerCase() ==
-                    characteristicUUID.toLowerCase()) {
+            if (c.uuid.toString() == characteristicUUID) {
               characteristic = c;
               ready.add(true);
               return true;

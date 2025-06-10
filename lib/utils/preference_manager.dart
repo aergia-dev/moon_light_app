@@ -21,7 +21,7 @@ class PreferenceManager {
 
   // 기본 장치 이름 - 원래 코드와 호환성 유지를 위해 변수명 유지
   String get deaultDevName {
-    return _prefs.getString('default_device_name') ?? 'LEDMoon';
+    return _prefs.getString('default_device_name') ?? 'sleep_light';
   }
 
   set deaultDevName(String name) {
