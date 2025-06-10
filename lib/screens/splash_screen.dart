@@ -4,7 +4,6 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/ble_provider.dart';
-import 'bluetooth_permission_screen.dart';
 import 'main_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -17,6 +16,7 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   bool _connectionFailed = false;
   late Timer _connectionTimer;
+  StreamSubscription<BluetoothConnectionState>? _connectionSubscription;
 
   @override
   void initState() {
@@ -27,8 +27,8 @@ class _SplashScreenState extends State<SplashScreen> {
       _attemptConnection();
     });
 
-    // 연결 시도 타임아웃 설정
-    _connectionTimer = Timer(const Duration(seconds: 8), () {
+    // 연결 시도 타임아웃을 더 길게 설정 (15초)
+    _connectionTimer = Timer(const Duration(seconds: 15), () {
       if (mounted) {
         setState(() {
           _connectionFailed = true;
@@ -47,30 +47,21 @@ class _SplashScreenState extends State<SplashScreen> {
   void _attemptConnection() async {
     final bleProvider = Provider.of<BleProvider>(context, listen: false);
 
-    try {
-      final connected = await bleProvider.connectDevice();
-
-      // 타이머가 아직 활성화되어 있고 위젯이 여전히 마운트된 경우
-      if (_connectionTimer.isActive && mounted) {
-        _connectionTimer.cancel();
-
-        if (connected) {
+    // 연결 상태 변화를 실시간으로 감지
+    _connectionSubscription = bleProvider.connectionStateStream.listen((state) {
+      if (state == BluetoothConnectionState.connected) {
+        // 연결 성공!
+        if (_connectionTimer.isActive && mounted) {
+          _connectionTimer.cancel();
           _navigateToMainScreen();
-        } else {
-          setState(() {
-            _connectionFailed = true;
-          });
-
-          // 실패 메시지를 잠시 보여준 후 메인 화면으로 이동
-          Future.delayed(const Duration(seconds: 2), () {
-            if (mounted) {
-              _navigateToMainScreen();
-            }
-          });
         }
       }
+    });
+
+    try {
+      // 연결 시도 (결과를 기다리지 않고 상태 변화만 감지)
+      bleProvider.connectDevice();
     } catch (e) {
-      print('연결 시도 중 오류 발생: $e');
       if (mounted) {
         setState(() {
           _connectionFailed = true;
@@ -87,6 +78,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _navigateToMainScreen() {
+    _connectionSubscription?.cancel();
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const MainScreen()),
     );
@@ -95,6 +87,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void dispose() {
     _connectionTimer.cancel();
+    _connectionSubscription?.cancel();
     super.dispose();
   }
 
@@ -122,8 +115,20 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               )
             else
-              const CircularProgressIndicator(
-                color: Colors.white,
+              Column(
+                children: [
+                  const CircularProgressIndicator(
+                    color: Colors.white,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    '기기 연결 중...',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
               ),
           ],
         ),

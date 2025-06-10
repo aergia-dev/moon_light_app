@@ -21,11 +21,13 @@ class BleService {
   var _ledStatus = LedStatus(isOn: false, brightness: 0, color: 0);
   bool lightState = false;
 
-  StreamController currentColorController = StreamController<Color>.broadcast();
-  StreamController stateController =
+  StreamController<Color> currentColorController =
+      StreamController<Color>.broadcast();
+  StreamController<BluetoothConnectionState> stateController =
       StreamController<BluetoothConnectionState>.broadcast();
-  StreamController lightOnOffController = StreamController<bool>.broadcast();
-  StreamController ready = StreamController<bool>.broadcast();
+  StreamController<bool> lightOnOffController =
+      StreamController<bool>.broadcast();
+  StreamController<bool> ready = StreamController<bool>.broadcast();
 
   BluetoothDevice? device;
   BluetoothCharacteristic? characteristic;

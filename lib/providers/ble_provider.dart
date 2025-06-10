@@ -28,6 +28,10 @@ class BleProvider extends ChangeNotifier {
   double get brightness => _brightness;
   String get connectionError => _connectionError;
 
+  // 연결 상태 스트림 getter 추가
+  Stream<BluetoothConnectionState> get connectionStateStream =>
+      _bleService.stateController.stream;
+
   set currentColor(Color color) {
     _currentColor = color;
     notifyListeners();

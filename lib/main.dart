@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'providers/ble_provider.dart';
 import 'screens/bluetooth_permission_screen.dart';
 import 'screens/splash_screen.dart';
-import 'services/ble_service.dart';
 import 'utils/preference_manager.dart';
 
 void main() async {
@@ -13,8 +12,6 @@ void main() async {
 
   final prefManager = PreferenceManager();
   await prefManager.init();
-
-  BleService.instance.init();
 
   runApp(const MyApp());
 }
