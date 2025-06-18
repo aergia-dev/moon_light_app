@@ -1,7 +1,3 @@
-// Copyright 2017, Paul DeMarco.
-// All rights reserved. Use of this source code is governed by a
-// BSD-style license that can be found in the LICENSE file.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
@@ -78,11 +74,6 @@ class ScanResultTile extends StatelessWidget {
     if (data == null) {
       return null;
     }
-    // List<String> res = [];
-    // data.forEach((id, bytes) {
-    //   res.add('${id.toUpperCase()}: ${getNiceHexArray(bytes)}');
-    // });
-    // return res.join(', ');
     return data.entries
         .map((entry) => '${entry.key}: ${entry.value}')
         .join(', ');
@@ -95,7 +86,6 @@ class ScanResultTile extends StatelessWidget {
       leading: Text(result.rssi.toString()),
       trailing: ElevatedButton(
         style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-        // textColor: Colors.white,
         onPressed: (result.advertisementData.connectable) ? onTap : null,
         child: const Text('CONNECT'),
       ),
@@ -170,7 +160,6 @@ class CharacteristicTile extends StatelessWidget {
       this.onReadPressed,
       this.onWritePressed,
       this.onNotificationPressed});
-  // : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -201,17 +190,13 @@ class CharacteristicTile extends StatelessWidget {
               IconButton(
                 icon: Icon(
                   Icons.file_download,
-                  color: Theme.of(context).iconTheme.color
-                    ?..withValues(alpha: 0.5 * 255),
+                  color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
                 ),
                 onPressed: onReadPressed,
               ),
               IconButton(
                 icon: Icon(Icons.file_upload,
-                    color: Theme.of(context)
-                        .iconTheme
-                        .color
-                        ?.withValues(alpha: 0.5 * 255)),
+                    color: Theme.of(context).iconTheme.color?.withOpacity(0.5)),
                 onPressed: onWritePressed,
               ),
               IconButton(
@@ -219,10 +204,7 @@ class CharacteristicTile extends StatelessWidget {
                     characteristic.isNotifying
                         ? Icons.sync_disabled
                         : Icons.sync,
-                    color: Theme.of(context)
-                        .iconTheme
-                        .color
-                        ?.withValues(alpha: 0.5 * 255)),
+                    color: Theme.of(context).iconTheme.color?.withOpacity(0.5)),
                 onPressed: onNotificationPressed,
               )
             ],
@@ -244,7 +226,6 @@ class DescriptorTile extends StatelessWidget {
       required this.descriptor,
       required this.onReadPressed,
       required this.onWritePressed});
-  // : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -270,20 +251,14 @@ class DescriptorTile extends StatelessWidget {
           IconButton(
             icon: Icon(
               Icons.file_download,
-              color: Theme.of(context)
-                  .iconTheme
-                  .color
-                  ?.withValues(alpha: 0.5 * 255),
+              color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
             ),
             onPressed: onReadPressed,
           ),
           IconButton(
             icon: Icon(
               Icons.file_upload,
-              color: Theme.of(context)
-                  .iconTheme
-                  .color
-                  ?.withValues(alpha: 0.5 * 255),
+              color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
             ),
             onPressed: onWritePressed,
           )
@@ -295,7 +270,6 @@ class DescriptorTile extends StatelessWidget {
 
 class AdapterStateTile extends StatelessWidget {
   const AdapterStateTile({super.key, required this.state});
-  //  : super(key: key);
 
   final BluetoothAdapterState state;
 
@@ -308,9 +282,7 @@ class AdapterStateTile extends StatelessWidget {
       color: Colors.redAccent,
       child: ListTile(
         title: Text('Bluetooth adapter is ${state.toString().substring(15)}',
-            style: texttheme.titleMedium?.copyWith(color: colorScheme.onError)
-            // style: Theme.of(context).primaryTextTheme.,
-            ),
+            style: texttheme.titleMedium?.copyWith(color: colorScheme.onError)),
         trailing: Icon(
           Icons.error,
           color: colorScheme.onError,
