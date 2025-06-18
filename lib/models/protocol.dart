@@ -6,5 +6,7 @@ class Protocol {
     "TEST_STATUS": [0x01, 0x04],
     "COLOR_CHANGE": [0x01, 0x05],
     "BRITHNESS_CHANGE": [0x01, 0x06],
+    "WRITE_DEV_NAME": [0x02, 0x01],
+    "WRITE_PASSKEY": [0x02, 0x02],
   };
 }

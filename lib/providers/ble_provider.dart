@@ -135,4 +135,33 @@ class BleProvider extends ChangeNotifier {
     _backupColor = color;
     notifyListeners();
   }
+
+  Future<bool> changeDeviceName(String newName) async {
+    if (!_lightConnected) {
+      _connectionError = '기기가 연결되지 않았습니다';
+      notifyListeners();
+      return false;
+    }
+
+    try {
+      final success = await _bleService.changeDeviceName(newName);
+
+      if (success) {
+        _deviceName = newName;
+
+        PreferenceManager().deaultDevName = newName;
+
+        notifyListeners();
+      } else {
+        _connectionError = '기기 이름 변경 실패';
+        notifyListeners();
+      }
+
+      return success;
+    } catch (e) {
+      _connectionError = '기기 이름 변경 오류: $e';
+      notifyListeners();
+      return false;
+    }
+  }
 }
