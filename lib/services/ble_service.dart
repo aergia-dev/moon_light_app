@@ -277,6 +277,45 @@ class BleService {
     }
   }
 
+  Future<bool> changeDeviceName(String newName) async {
+    if (characteristic == null) {
+      print("기기가 연결되지 않음");
+      return false;
+    }
+    if (newName.length > 14) {
+      print("기기 이름이 너무 깁니다 (최대 14글자)");
+      return false;
+    }
+
+    try {
+      List<int> nameData = _createDeviceNameData(newName);
+
+      List<int> command = (Protocol.map['WRITE_DEV_NAME'] ?? []) + nameData;
+
+      print("기기 이름 변경 요청: '$newName'");
+
+      await characteristic!.write(command);
+
+      print("기기 이름 변경 완료");
+      return true;
+    } catch (e) {
+      print("기기 이름 변경 중 오류: $e");
+      return false;
+    }
+  }
+
+  List<int> _createDeviceNameData(String name) {
+    List<int> nameBytes = name.codeUnits;
+    List<int> data = List.filled(15, 0);
+
+    int maxLength = nameBytes.length > 14 ? 14 : nameBytes.length;
+    for (int i = 0; i < maxLength; i++) {
+      data[i] = nameBytes[i];
+    }
+
+    return data;
+  }
+
   void dispose() {
     currentColorController.close();
     stateController.close();

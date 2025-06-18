@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'device_name_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -35,8 +37,11 @@ class SettingsScreen extends StatelessWidget {
                   title: '기기 변경',
                   subtitle: '연결된 기기 이름 변경',
                   onTap: () {
-                    // TODO: 기기 변경 화면으로 이동
-                    _showComingSoon(context, '기기 변경');
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const DeviceNameScreen(),
+                      ),
+                    );
                   },
                 ),
                 _buildDivider(),
@@ -46,14 +51,12 @@ class SettingsScreen extends StatelessWidget {
                   title: '타이머',
                   subtitle: '자동 켜기/끄기 설정',
                   onTap: () {
-                    // TODO: 타이머 설정 화면으로 이동
                     _showComingSoon(context, '타이머 설정');
                   },
                 ),
               ],
             ),
           ),
-          // 앱 버전 정보
           Container(
             padding: const EdgeInsets.all(20.0),
             child: const Text(
