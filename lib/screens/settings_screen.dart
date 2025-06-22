@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'device_name_screen.dart';
+import 'device_power_onoff.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -51,9 +51,13 @@ class SettingsScreen extends StatelessWidget {
                   title: '타이머',
                   subtitle: '자동 켜기/끄기 설정',
                   onTap: () {
-                    _showComingSoon(context, '타이머 설정');
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => DevicePowerOnOffSchedule(),
+                      ),
+                    );
                   },
-                ),
+                )
               ],
             ),
           ),
