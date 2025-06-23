@@ -210,6 +210,21 @@ class BleService {
     }
   }
 
+  Future<void> syncTime() async {
+    try {
+      print("시간 동기화 시작");
+      DateTime now = DateTime.now();
+      int timestamp = (now.millisecondsSinceEpoch / 1000).round();
+      await characteristic?.write(
+          (Protocol.map['SYNC_TIME'] ?? []) + [timestamp],
+          withoutResponse: false);
+
+      print("시간 동기화 완료");
+    } catch (e) {
+      print("시간 동기화 중 오류: $e");
+    }
+  }
+
   Future<void> readLedStatus() async {
     try {
       print("쓰기 후 LED 상태 읽기");

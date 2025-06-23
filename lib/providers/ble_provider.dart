@@ -75,6 +75,7 @@ class BleProvider extends ChangeNotifier {
 
     _bleService.ready.stream.listen((ready) async {
       if (ready) {
+        await _bleService.syncTime();
         await _bleService.readLedStatus();
 
         if (_bleService.device != null) {
