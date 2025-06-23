@@ -18,7 +18,16 @@ class BleService {
 
   BleService._internal();
 
-  var _ledStatus = LedStatus(isOn: false, brightness: 0, color: 0);
+  var _ledStatus = LedStatus(
+      isOn: false,
+      brightness: 0,
+      color: 0,
+      powerOnHour: 0,
+      powerOnMinute: 0,
+      powerOffHour: 0,
+      powerOffMinute: 0,
+      powerOffDelayMin: 0);
+
   bool lightState = false;
 
   StreamController<Color> currentColorController =
@@ -314,6 +323,37 @@ class BleService {
     }
 
     return data;
+  }
+
+  Future<void> applySchedulePowerOnOffTime(
+      DateTime powerOnTime, DateTime powerOffTime) async {
+    try {
+      LedStatus status = getLedStatus();
+      status.powerOnHour = powerOnTime.hour;
+      status.powerOnMinute = powerOnTime.minute;
+      status.powerOffHour = powerOffTime.hour;
+      status.powerOffMinute = powerOffTime.minute;
+
+      await characteristic?.write(
+          (Protocol.map['WRITE_STATUS'] ?? []) + status.toBytes(),
+          withoutResponse: true);
+    } catch (e) {
+      print("밝기 적용 중 오류: $e");
+    }
+  }
+
+  Future<void> applyDelayPowerOffTime(DateTime DelaypowerOffTime) async {
+    try {
+      LedStatus status = getLedStatus();
+      status.powerOffDelayMin =
+          DelaypowerOffTime.hour * 60 + DelaypowerOffTime.minute;
+
+      await characteristic?.write(
+          (Protocol.map['WRITE_STATUS'] ?? []) + status.toBytes(),
+          withoutResponse: true);
+    } catch (e) {
+      print("밝기 적용 중 오류: $e");
+    }
   }
 
   void dispose() {
