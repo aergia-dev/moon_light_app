@@ -357,20 +357,6 @@ class BleService {
     }
   }
 
-  Future<void> applyDelayPowerOffTime(DateTime DelaypowerOffTime) async {
-    try {
-      LedStatus status = getLedStatus();
-      status.powerOffDelayMin =
-          DelaypowerOffTime.hour * 60 + DelaypowerOffTime.minute;
-
-      await characteristic?.write(
-          (Protocol.map['WRITE_STATUS'] ?? []) + status.toBytes(),
-          withoutResponse: true);
-    } catch (e) {
-      print("밝기 적용 중 오류: $e");
-    }
-  }
-
   void dispose() {
     currentColorController.close();
     stateController.close();

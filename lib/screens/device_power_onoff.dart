@@ -19,13 +19,58 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
   DateTime selectedPowerOnTime = DateTime.now();
   DateTime selectedPowerOffTime = DateTime.now().add(Duration(hours: 12));
   DateTime selectedDelayPowerOffTime = DateTime.now();
-  bool _isPowerScheduleOn = false;
-  bool _isReservedPowerOff = false;
+  bool _isPowerScheduleOnOff = false;
+  bool _isDelayPowerOff = false;
+
+  LedStatus _ledStatus = LedStatus(
+    isOn: false,
+    brightness: 0,
+    color: 0,
+    powerOnHour: 0,
+    powerOnMinute: 0,
+    powerOffHour: 0,
+    powerOffMinute: 0,
+    powerOffDelayMin: 0,
+  );
+
+  final BleService _bleService = BleService.instance;
 
   @override
   void initState() {
     super.initState();
-    //값을 어떻게 가져오나?
+    _ledStatus = BleService().getLedStatus();
+
+    selectedPowerOnTime = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      10, //_ledStatus.powerOnHour,
+      _ledStatus.powerOnMinute,
+    );
+
+    selectedPowerOffTime = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      9, //_ledStatus.powerOffHour,
+      _ledStatus.powerOffMinute,
+    );
+
+    selectedDelayPowerOffTime = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      0,
+      _ledStatus.powerOffDelayMin,
+    );
+
+    _isPowerScheduleOnOff = selectedPowerOnTime.hour > 0 ||
+        selectedPowerOnTime.minute > 0 ||
+        selectedPowerOffTime.hour > 0 ||
+        selectedPowerOffTime.minute > 0;
+
+    _isDelayPowerOff = selectedDelayPowerOffTime.hour > 0 ||
+        selectedDelayPowerOffTime.minute > 0;
   }
 
   @override
@@ -34,9 +79,8 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
     super.dispose();
   }
 
-  // 시간 선택 팝업 표시
   void _showTimePickerDialog(
-      bool isPowerOn, void Function(DateTime selectedDateTime) saveCb) {
+      bool isPowerOn, void Function(DateTime selectedDateTime) updateCb) {
     DateTime currentTime =
         isPowerOn ? selectedPowerOnTime : selectedPowerOffTime;
     DateTimePickerController currentController =
@@ -179,11 +223,7 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
                         child: ElevatedButton(
                           onPressed: () {
                             setState(() {
-                              if (isPowerOn) {
-                                saveCb(tempSelectedDate);
-                              } else {
-                                saveCb(tempSelectedDate);
-                              }
+                              updateCb(tempSelectedDate);
                             });
                             Navigator.of(context).pop();
                           },
@@ -213,27 +253,6 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
         );
       },
     );
-  }
-
-  // 기기 이름 변경 함수 추가
-  void _changePowerOnOffTime() async {
-    if (_nameController.text.isEmpty) {
-      return;
-    }
-
-    setState(() {
-      _isChanging = true;
-    });
-
-    // 여기에 실제 기기 이름 변경 로직 구현
-    await Future.delayed(Duration(seconds: 2)); // 예시 지연
-
-    setState(() {
-      _isChanging = false;
-    });
-
-    // 성공 시 이전 화면으로 돌아가기
-    Navigator.of(context).pop();
   }
 
   @override
@@ -270,10 +289,10 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
                 ),
                 Icon(Icons.light_mode, size: 20),
                 Switch(
-                  value: _isPowerScheduleOn,
+                  value: _isPowerScheduleOnOff,
                   onChanged: (value) {
                     setState(() {
-                      _isPowerScheduleOn = value;
+                      _isPowerScheduleOnOff = value;
                     });
                   },
                   activeColor: Colors.white,
@@ -282,12 +301,12 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
               ],
             ),
             const SizedBox(height: 15),
-            if (_isPowerScheduleOn) ...[
+            if (_isPowerScheduleOnOff) ...[
               // Power On 시간 설정
               _buildPowerOnTimeSetting(),
               _buildPowerOffTimeSetting(),
               const SizedBox(height: 20),
-              // 저장 버튼
+              // power on/off 저장 버튼
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -329,10 +348,10 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
                 ),
                 Icon(Icons.light_mode, size: 20),
                 Switch(
-                  value: _isReservedPowerOff,
+                  value: _isDelayPowerOff,
                   onChanged: (value) {
                     setState(() {
-                      _isReservedPowerOff = value;
+                      _isDelayPowerOff = value;
                     });
                   },
                   activeColor: Colors.white,
@@ -340,100 +359,35 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
                 Icon(Icons.dark_mode, size: 20),
               ],
             ),
-            if (_isReservedPowerOff)
-              GestureDetector(
-                onTap: () => _showTimePickerDialog(false),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[900],
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                        color: const Color.fromARGB(255, 235, 48, 34)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color.fromARGB(255, 66, 110, 147)
-                            .withValues(
-                                red: 0.1, green: 0.1, blue: 0.8, alpha: 0.7),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.power_off,
-                                color: Colors.red,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                '전원 꺼짐 예약 시간',
-                                style: TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${selectedPowerOffTime.hour.toString().padLeft(2, '0')}:${selectedPowerOffTime.minute.toString().padLeft(2, '0')}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${selectedPowerOffTime.hour * 60 + selectedPowerOffTime.minute} 분 후에 꺼짐',
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withValues(
-                              red: 0.1, green: 0.1, blue: 0.8, alpha: 0.7),
-                          borderRadius: BorderRadius.circular(50),
-                        ),
-                        child: const Icon(
-                          Icons.access_time,
-                          color: Colors.red,
-                          size: 24,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              )
+            if (_isDelayPowerOff) ...[
+              _buildDelayPowerOffTimeSetting(),
+            ],
           ],
         ),
       ),
     );
   }
 
+  void updatePowerOnCb(DateTime t) {
+    print("save power on time: ${t.hour}:${t.minute}");
+    selectedPowerOnTime = t;
+  }
+
+  void updatePowerOffCb(DateTime t) {
+    print("save power off time: ${t.hour}:${t.minute}");
+    selectedPowerOffTime = t;
+  }
+
+  void updateDelayPowerOffCb(DateTime t) {
+    print("save power off time: ${t.hour}:${t.minute}");
+    selectedDelayPowerOffTime = t;
+  }
+
   Widget _buildPowerOnTimeSetting() {
     return Column(
       children: [
         GestureDetector(
-          onTap: () => _showTimePickerDialog(
-            true,
-          ),
+          onTap: () => _showTimePickerDialog(true, updatePowerOnCb),
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -520,7 +474,7 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
       children: [
         // Power Off 시간 설정
         GestureDetector(
-          onTap: () => _showTimePickerDialog(false),
+          onTap: () => _showTimePickerDialog(false, updatePowerOffCb),
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -599,5 +553,180 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
         ),
       ],
     );
+  }
+
+  Widget _buildDelayPowerOffTimeSetting() {
+    return Column(
+      children: [
+        // Power Off 시간 설정
+        GestureDetector(
+          onTap: () => _showTimePickerDialog(false, updateDelayPowerOffCb),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey[900],
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.red),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red
+                      .withValues(red: 0.5, green: 0.1, blue: 0.3, alpha: 0.7),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.power_off,
+                          color: Colors.red,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Power OFF',
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${selectedPowerOffTime.hour.toString().padLeft(2, '0')}:${selectedPowerOffTime.minute.toString().padLeft(2, '0')}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${selectedPowerOffTime.hour < 12 ? '오전' : '오후'} ${(selectedPowerOffTime.hour == 0 ? 12 : selectedPowerOffTime.hour > 12 ? selectedPowerOffTime.hour - 12 : selectedPowerOffTime.hour)}시 ${selectedPowerOffTime.minute.toString().padLeft(2, '0')}분',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(
+                        red: 0.0, green: 0.0, blue: 0.3, alpha: 0.7),
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: const Icon(
+                    Icons.access_time,
+                    color: Colors.red,
+                    size: 24,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        // power on/off 저장 버튼
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _changePowerOffDelayTime,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color.fromARGB(255, 104, 6, 161),
+              disabledBackgroundColor: Colors.grey[700],
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              '전원 꺼짐 예약 저장',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  _changePowerOnOffTime() async {
+    setState(() {
+      _isChanging = true;
+    });
+
+    try {
+      print("_changePowerOnOffTime");
+
+      // Update the ledStatus with the new power on/off times
+      _ledStatus.powerOnHour = selectedPowerOnTime.hour;
+      _ledStatus.powerOnMinute = selectedPowerOnTime.minute;
+      _ledStatus.powerOffHour = selectedPowerOffTime.hour;
+      _ledStatus.powerOffMinute = selectedPowerOffTime.minute;
+
+      // Send the updated status to the BLE service
+      await _bleService.applySchedulePowerOnOffTime(
+          selectedPowerOnTime, selectedPowerOffTime);
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('전원 스케줄이 저장되었습니다.')),
+      );
+    } catch (e) {
+      // Handle any errors that occur during the update
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('오류 발생: $e')),
+      );
+    } finally {
+      setState(() {
+        _isChanging = false;
+      });
+    }
+  }
+
+  _changePowerOffDelayTime() async {
+    setState(() {
+      _isChanging = true;
+    });
+
+    try {
+      print("_changePowerOffDelayTime");
+
+      // Update the ledStatus with the new power on/off times
+      _ledStatus.powerOffDelayMin = selectedDelayPowerOffTime.minute;
+
+      // Send the updated status to the BLE service
+      await _bleService.applySchedulePowerOnOffTime(
+          selectedPowerOnTime, selectedPowerOffTime);
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('전원 스케줄이 저장되었습니다.')),
+      );
+    } catch (e) {
+      // Handle any errors that occur during the update
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('오류 발생: $e')),
+      );
+    } finally {
+      setState(() {
+        _isChanging = false;
+      });
+    }
   }
 }
