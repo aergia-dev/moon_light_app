@@ -8,6 +8,8 @@ import '../models/led_status.dart';
 import '../models/protocol.dart';
 import '../utils/preference_manager.dart';
 
+import 'dart:typed_data';
+
 class BleService {
   static final BleService _instance = BleService._internal();
   static BleService get instance => _instance;
@@ -22,6 +24,7 @@ class BleService {
       isOn: false,
       brightness: 0,
       color: 0,
+      isTimeSynced: false,
       powerOnHour: 0,
       powerOnMinute: 0,
       powerOffHour: 0,
@@ -213,10 +216,15 @@ class BleService {
   Future<void> syncTime() async {
     try {
       print("시간 동기화 시작");
-      DateTime now = DateTime.now();
+      DateTime now = DateTime.now().toUtc();
       int timestamp = (now.millisecondsSinceEpoch / 1000).round();
+
+      final buffer = Uint8List(8).buffer;
+      final writer = ByteData.view(buffer);
+      writer.setUint64(0, timestamp, Endian.little);
+
       await characteristic?.write(
-          (Protocol.map['SYNC_TIME'] ?? []) + [timestamp],
+          (Protocol.map['SYNC_TIME'] ?? []) + buffer.asUint8List(),
           withoutResponse: false);
 
       print("시간 동기화 완료");
@@ -340,20 +348,22 @@ class BleService {
     return data;
   }
 
-  Future<void> applySchedulePowerOnOffTime(
-      DateTime powerOnTime, DateTime powerOffTime) async {
+  Future<void> applySchedulePowerOnOffTime(DateTime powerOnTime,
+      DateTime powerOffTime, DateTime DelayPowerOffTime) async {
     try {
       LedStatus status = getLedStatus();
       status.powerOnHour = powerOnTime.hour;
       status.powerOnMinute = powerOnTime.minute;
       status.powerOffHour = powerOffTime.hour;
       status.powerOffMinute = powerOffTime.minute;
+      status.powerOffDelayMin =
+          DelayPowerOffTime.hour * 60 + DelayPowerOffTime.minute;
 
       await characteristic?.write(
           (Protocol.map['WRITE_STATUS'] ?? []) + status.toBytes(),
           withoutResponse: true);
     } catch (e) {
-      print("밝기 적용 중 오류: $e");
+      print("error on applySchedulePowerOnOffTime: $e");
     }
   }
 

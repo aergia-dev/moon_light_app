@@ -16,9 +16,9 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
   final controllerOn = DateTimePickerController();
   final controllerOff = DateTimePickerController();
   final now = DateTime.now();
-  DateTime selectedPowerOnTime = DateTime.now();
-  DateTime selectedPowerOffTime = DateTime.now().add(Duration(hours: 12));
-  DateTime selectedDelayPowerOffTime = DateTime.now();
+  DateTime _selectedPowerOnTime = DateTime.now();
+  DateTime _selectedPowerOffTime = DateTime.now();
+  DateTime _selectedDelayPowerOffTime = DateTime.now();
   bool _isPowerScheduleOnOff = false;
   bool _isDelayPowerOff = false;
 
@@ -40,23 +40,23 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
     super.initState();
     _ledStatus = BleService().getLedStatus();
 
-    selectedPowerOnTime = DateTime(
+    _selectedPowerOnTime = DateTime(
       now.year,
       now.month,
       now.day,
-      10, //_ledStatus.powerOnHour,
+      _ledStatus.powerOnHour,
       _ledStatus.powerOnMinute,
     );
 
-    selectedPowerOffTime = DateTime(
+    _selectedPowerOffTime = DateTime(
       now.year,
       now.month,
       now.day,
-      9, //_ledStatus.powerOffHour,
+      _ledStatus.powerOffHour,
       _ledStatus.powerOffMinute,
     );
 
-    selectedDelayPowerOffTime = DateTime(
+    _selectedDelayPowerOffTime = DateTime(
       now.year,
       now.month,
       now.day,
@@ -64,13 +64,13 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
       _ledStatus.powerOffDelayMin,
     );
 
-    _isPowerScheduleOnOff = selectedPowerOnTime.hour > 0 ||
-        selectedPowerOnTime.minute > 0 ||
-        selectedPowerOffTime.hour > 0 ||
-        selectedPowerOffTime.minute > 0;
+    _isPowerScheduleOnOff = _selectedPowerOnTime.hour > 0 ||
+        _selectedPowerOnTime.minute > 0 ||
+        _selectedPowerOffTime.hour > 0 ||
+        _selectedPowerOffTime.minute > 0;
 
-    _isDelayPowerOff = selectedDelayPowerOffTime.hour > 0 ||
-        selectedDelayPowerOffTime.minute > 0;
+    _isDelayPowerOff = _selectedDelayPowerOffTime.hour > 0 ||
+        _selectedDelayPowerOffTime.minute > 0;
   }
 
   @override
@@ -82,7 +82,7 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
   void _showTimePickerDialog(
       bool isPowerOn, void Function(DateTime selectedDateTime) updateCb) {
     DateTime currentTime =
-        isPowerOn ? selectedPowerOnTime : selectedPowerOffTime;
+        isPowerOn ? _selectedPowerOnTime : _selectedPowerOffTime;
     DateTimePickerController currentController =
         isPowerOn ? controllerOn : controllerOff;
 
@@ -310,7 +310,7 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isChanging ? null : _changePowerOnOffTime,
+                  onPressed: _changePowerOnOffTime,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blueAccent,
                     disabledBackgroundColor: Colors.grey[700],
@@ -319,19 +319,14 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: _isChanging
-                      ? const CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        )
-                      : const Text(
-                          '스케줄 저장',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                  child: const Text(
+                    '스케줄 저장',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -370,17 +365,17 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
 
   void updatePowerOnCb(DateTime t) {
     print("save power on time: ${t.hour}:${t.minute}");
-    selectedPowerOnTime = t;
+    _selectedPowerOnTime = t;
   }
 
   void updatePowerOffCb(DateTime t) {
     print("save power off time: ${t.hour}:${t.minute}");
-    selectedPowerOffTime = t;
+    _selectedPowerOffTime = t;
   }
 
   void updateDelayPowerOffCb(DateTime t) {
     print("save power off time: ${t.hour}:${t.minute}");
-    selectedDelayPowerOffTime = t;
+    _selectedDelayPowerOffTime = t;
   }
 
   Widget _buildPowerOnTimeSetting() {
@@ -431,19 +426,11 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${selectedPowerOnTime.hour.toString().padLeft(2, '0')}:${selectedPowerOnTime.minute.toString().padLeft(2, '0')}',
+                      '${_selectedPowerOnTime.hour.toString().padLeft(2, '0')}:${_selectedPowerOnTime.minute.toString().padLeft(2, '0')}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${selectedPowerOnTime.hour < 12 ? '오전' : '오후'} ${(selectedPowerOnTime.hour == 0 ? 12 : selectedPowerOnTime.hour > 12 ? selectedPowerOnTime.hour - 12 : selectedPowerOnTime.hour)}시 ${selectedPowerOnTime.minute.toString().padLeft(2, '0')}분',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -517,19 +504,11 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${selectedPowerOffTime.hour.toString().padLeft(2, '0')}:${selectedPowerOffTime.minute.toString().padLeft(2, '0')}',
+                      '${_selectedPowerOffTime.hour.toString().padLeft(2, '0')}:${_selectedPowerOffTime.minute.toString().padLeft(2, '0')}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${selectedPowerOffTime.hour < 12 ? '오전' : '오후'} ${(selectedPowerOffTime.hour == 0 ? 12 : selectedPowerOffTime.hour > 12 ? selectedPowerOffTime.hour - 12 : selectedPowerOffTime.hour)}시 ${selectedPowerOffTime.minute.toString().padLeft(2, '0')}분',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -603,19 +582,11 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${selectedPowerOffTime.hour.toString().padLeft(2, '0')}:${selectedPowerOffTime.minute.toString().padLeft(2, '0')}',
+                      '${_selectedDelayPowerOffTime.hour.toString().padLeft(2, '0')}:${_selectedPowerOffTime.minute.toString().padLeft(2, '0')}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${selectedPowerOffTime.hour < 12 ? '오전' : '오후'} ${(selectedPowerOffTime.hour == 0 ? 12 : selectedPowerOffTime.hour > 12 ? selectedPowerOffTime.hour - 12 : selectedPowerOffTime.hour)}시 ${selectedPowerOffTime.minute.toString().padLeft(2, '0')}분',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -642,7 +613,7 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _changePowerOffDelayTime,
+            onPressed: _changeDelayPowerOffTime,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color.fromARGB(255, 104, 6, 161),
               disabledBackgroundColor: Colors.grey[700],
@@ -673,15 +644,23 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
     try {
       print("_changePowerOnOffTime");
 
+      if (_selectedPowerOnTime.hour == _selectedPowerOffTime.hour &&
+          _selectedPowerOnTime.minute == _selectedPowerOffTime.minute) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('on/off 시간이 같은 경우는 설정할 수 없습니다')),
+        );
+        return;
+      }
+
       // Update the ledStatus with the new power on/off times
-      _ledStatus.powerOnHour = selectedPowerOnTime.hour;
-      _ledStatus.powerOnMinute = selectedPowerOnTime.minute;
-      _ledStatus.powerOffHour = selectedPowerOffTime.hour;
-      _ledStatus.powerOffMinute = selectedPowerOffTime.minute;
+      // _ledStatus.powerOnHour = _selectedPowerOnTime.hour;
+      // _ledStatus.powerOnMinute = _selectedPowerOnTime.minute;
+      // _ledStatus.powerOffHour = _selectedPowerOffTime.hour;
+      // _ledStatus.powerOffMinute = _selectedPowerOffTime.minute;
 
       // Send the updated status to the BLE service
-      await _bleService.applySchedulePowerOnOffTime(
-          selectedPowerOnTime, selectedPowerOffTime);
+      await _bleService.applySchedulePowerOnOffTime(_selectedPowerOnTime,
+          _selectedPowerOffTime, _selectedDelayPowerOffTime);
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
@@ -699,20 +678,20 @@ class _DevicePowerOnOffSchedule extends State<DevicePowerOnOffSchedule> {
     }
   }
 
-  _changePowerOffDelayTime() async {
+  _changeDelayPowerOffTime() async {
     setState(() {
       _isChanging = true;
     });
 
     try {
-      print("_changePowerOffDelayTime");
+      print("_changeDelayPowerOffTime");
 
       // Update the ledStatus with the new power on/off times
-      _ledStatus.powerOffDelayMin = selectedDelayPowerOffTime.minute;
+      // _ledStatus.powerOffDelayMin = _selectedDelayPowerOffTime.minute;
 
       // Send the updated status to the BLE service
-      await _bleService.applySchedulePowerOnOffTime(
-          selectedPowerOnTime, selectedPowerOffTime);
+      await _bleService.applySchedulePowerOnOffTime(_selectedPowerOnTime,
+          _selectedPowerOffTime, _selectedDelayPowerOffTime);
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
