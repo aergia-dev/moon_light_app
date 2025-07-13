@@ -1,0 +1,13 @@
+class Protocol {
+  static var map = {
+    "RESET": [0x01, 0x01],
+    "WRITE_STATUS": [0x01, 0x02],
+    "READ_STATUS": [0x01, 0x03],
+    "TEST_STATUS": [0x01, 0x04],
+    "COLOR_CHANGE": [0x01, 0x05],
+    "BRITHNESS_CHANGE": [0x01, 0x06],
+    "SYNC_TIME": [0x01, 0x07],
+    "WRITE_DEV_NAME": [0x02, 0x01],
+    "WRITE_PASSKEY": [0x02, 0x02],
+  };
+}
